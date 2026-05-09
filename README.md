@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://i.imgur.com/your-logo-placeholder.png" alt="RUSH Logo" width="120" />
   <h1>RUSH — Voice-First Web3 Support Agent</h1>
   <p><strong>Stop losing users to confusing blockchain errors.</strong></p>
   <p>
