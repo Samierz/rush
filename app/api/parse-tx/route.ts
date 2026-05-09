@@ -31,6 +31,38 @@ function validateBody(body: unknown): body is ParseTxRequestBody {
 // Claude → ElevenLabs aşamalarına geçebilmesi için mock result döner.
 
 function buildDemoMockResult(txHash: string): ParsedTxResult {
+  if (txHash.startsWith('3L3RY')) {
+    return {
+      txHash,
+      errorType: 'insufficient_funds',
+      logs: [
+        'Program log: Instruction: Transfer',
+        'Program log: Error: custom program error: 0x1',
+        'Program log: Insufficient funds for rent',
+        'Program failed to complete: InsufficientFunds',
+      ],
+      rawError: { InstructionError: [0, { Custom: 1 }] },
+      slot: null,
+      blockTime: null,
+    }
+  }
+
+  if (txHash.startsWith('4VZdo')) {
+    return {
+      txHash,
+      errorType: 'congestion',
+      logs: [
+        'Program log: Instruction: Swap',
+        'Program log: Blockhash not found',
+        'Program failed to complete: Transaction expired',
+      ],
+      rawError: { BlockhashNotFound: {} },
+      slot: null,
+      blockTime: null,
+    }
+  }
+
+  // Varsayılan / Slippage mock
   return {
     txHash,
     errorType: 'slippage',

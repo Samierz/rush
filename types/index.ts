@@ -5,6 +5,7 @@ export type TxErrorType =
   | 'slippage'
   | 'insufficient_funds'
   | 'program_error'
+  | 'congestion'
   | 'unknown'
 
 /** Parse edilmiş TX sonucu */

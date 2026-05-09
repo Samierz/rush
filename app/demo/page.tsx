@@ -26,8 +26,12 @@ type TxStatus = 'idle' | 'sending' | 'failed'
 
 // ─── Sahte başarısız TX hash (demo için — gerçek Solana TX eklenecek) ─────
 
-const DEMO_FAILED_TX_HASH =
-  '5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBwm8LZnSzuXVd6kJgzPwmEhsq4KHVGR55MKCdAb7sYakNvz'
+const DEMO_SLIPPAGE_TX_HASH =
+  '2AXDGYSE4f2sz7tvMMzyHvUfcoJmxudvdhBcmiUSo6ijwfYmfZYsKRxboQMPh3R4kUhXRVdtSXFXMheka4Rc4P2'
+const DEMO_FUNDS_TX_HASH =
+  '3L3RY5sT8K4kyEnqhizwaqxLEbcYvpGrGPNEYRwtbCSUtL6YL86jdrvCbohnP5q8VxQ3qzGmt3W3iQJW97rD7m3'
+const DEMO_CONGESTION_TX_HASH =
+  '4VZdodJgBy6dxMgm45zusmRzrPvKtiumu5YrK9RLPJADpzeJzgebxHsoQD4B58FCFS6aGUufKZka56xFiBGpB94'
 
 // ─── Page ─────────────────────────────────────────────────────────────────
 
@@ -36,22 +40,24 @@ export default function DemoPage() {
   const [txHash, setTxHash] = useState<string | null>(null)
 
   // Başarısız TX simülasyonu
-  async function handleSendFailedTx() {
+  async function handleSendFailedTx(type: 'slippage' | 'funds' | 'congestion') {
     if (txStatus === 'sending') return
 
     setTxStatus('sending')
     setTxHash(null)
 
-    // Demo: kısa gecikme ile başarısız TX simüle et
     await new Promise<void>((resolve) => setTimeout(resolve, 500))
 
-    const hash = DEMO_FAILED_TX_HASH
+    let hash = DEMO_SLIPPAGE_TX_HASH
+    if (type === 'funds') hash = DEMO_FUNDS_TX_HASH
+    if (type === 'congestion') hash = DEMO_CONGESTION_TX_HASH
+
     setTxHash(hash)
     setTxStatus('failed')
 
-    // localStorage'a kaydet — SupportWidget bunu okuyacak
     try {
       localStorage.setItem(LS_KEY, hash)
+      window.dispatchEvent(new Event('rush:demo_failed_tx'))
     } catch {
       // Private browsing — sessizce devam et
     }
@@ -97,35 +103,42 @@ export default function DemoPage() {
             </p>
           </div>
 
-          {/* Gönder butonu */}
-          <button
-            id="send-failed-tx-btn"
-            onClick={handleSendFailedTx}
-            disabled={txStatus === 'sending'}
-            aria-busy={txStatus === 'sending'}
-            className="w-full flex items-center justify-center gap-2
-                       bg-purple-600 hover:bg-purple-500 active:bg-purple-700
-                       disabled:opacity-60 disabled:cursor-not-allowed
-                       text-white font-semibold py-3 px-6 rounded-xl
-                       transition-all duration-200 ease-in-out"
-          >
-            {txStatus === 'sending' ? (
-              <>
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Gönderiliyor...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Başarısız TX Gönder
-              </>
-            )}
-          </button>
+          {/* Gönder butonları */}
+          <div className="grid grid-cols-1 gap-3">
+            <button
+              onClick={() => handleSendFailedTx('slippage')}
+              disabled={txStatus === 'sending'}
+              className="w-full flex items-center justify-center gap-2
+                         bg-purple-600 hover:bg-purple-500 active:bg-purple-700
+                         disabled:opacity-60 disabled:cursor-not-allowed
+                         text-white font-semibold py-3 px-6 rounded-xl
+                         transition-all duration-200"
+            >
+              Slippage (Fiyat Kayması) Hatası Gönder
+            </button>
+            <button
+              onClick={() => handleSendFailedTx('funds')}
+              disabled={txStatus === 'sending'}
+              className="w-full flex items-center justify-center gap-2
+                         bg-red-600 hover:bg-red-500 active:bg-red-700
+                         disabled:opacity-60 disabled:cursor-not-allowed
+                         text-white font-semibold py-3 px-6 rounded-xl
+                         transition-all duration-200"
+            >
+              Yetersiz Bakiye Hatası Gönder
+            </button>
+            <button
+              onClick={() => handleSendFailedTx('congestion')}
+              disabled={txStatus === 'sending'}
+              className="w-full flex items-center justify-center gap-2
+                         bg-orange-600 hover:bg-orange-500 active:bg-orange-700
+                         disabled:opacity-60 disabled:cursor-not-allowed
+                         text-white font-semibold py-3 px-6 rounded-xl
+                         transition-all duration-200"
+            >
+              Ağ Yoğunluğu Hatası Gönder
+            </button>
+          </div>
 
           {/* TX durum göstergesi */}
           <div
@@ -156,7 +169,7 @@ export default function DemoPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                   </svg>
                   <p className="text-red-300 text-sm font-medium">
-                    İşlem başarısız — SlippageToleranceExceeded
+                    İşlem başarısız — Devnet Hatası
                   </p>
                 </div>
                 <p className="text-slate-600 text-xs font-mono break-all pl-6">

@@ -1,7 +1,7 @@
 // components/SupportWidget.tsx — RUSH float destek butonu ve paneli
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSupportAgent } from '@/hooks/useSupportAgent'
 import { useVoiceResponse } from '@/hooks/useVoiceResponse'
 import TxConfirmModal from './TxConfirmModal'
@@ -101,6 +101,18 @@ export function SupportWidget() {
 
   const { playAudio, isLoading: voiceLoading, isPlaying, error: voiceError } =
     useVoiceResponse(explanation ?? '')
+
+  // ── Global event dinleyici (Demo için) ──────────────────────────────────
+  useEffect(() => {
+    const handleNewTx = () => {
+      reset() // Önceki durumu temizle
+      setIsOpen(true) // Paneli otomatik aç
+      setTimeout(() => openWidget(), 50) // State güncellenmesi için ufak bir gecikme
+    }
+
+    window.addEventListener('rush:demo_failed_tx', handleNewTx)
+    return () => window.removeEventListener('rush:demo_failed_tx', handleNewTx)
+  }, [openWidget, reset])
 
   // ── Panel aç/kapat ────────────────────────────────────────────────────
 

@@ -12,9 +12,12 @@ import { GEMINI_API_KEY, GEMINI_MODEL } from './config'
 // ─── Sistem Prompt ─────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT =
-  'Kullanıcının Solana işlemi başarısız oldu. Buna teknik olmayan, TÜRKÇE ve tam bir açıklama yap. ' +
-  'Şu örneğin dışına çıkma, benzerini yaz: "İşleminiz piyasadaki fiyat değişimi nedeniyle iptal edildi. Şimdi fiyat toleransını artırarak işlemi sizin için yeniden hazırlıyorum." ' +
-  'Cümleyi asla yarım bırakma, tam olarak bitir.'
+  'Kullanıcının Solana işlemi başarısız oldu. Buna teknik olmayan, TÜRKÇE ve 2 cümlelik tam bir açıklama yap. ' +
+  'Gelen hataya göre şu mantığı kullan:\n' +
+  '- Eğer hata Slippage ise: "İşleminiz fiyat değişimi nedeniyle iptal edildi. Şimdi fiyat toleransını artırarak işlemi sizin için yeniden hazırlıyorum." de.\n' +
+  '- Eğer hata Insufficient Funds (Yetersiz Bakiye) ise: "Cüzdanınızdaki bakiye yetersiz olduğu için işlem gerçekleşmedi. İşlem miktarını bakiyenize uygun olarak düşürüp işlemi yeniden hazırlıyorum." de.\n' +
+  '- Eğer hata Congestion/Blockhash ise: "Solana ağı şu an çok yoğun olduğu için işleminiz zaman aşımına uğradı. İşleminize ufak bir öncelik ücreti ekleyerek yeniden hazırlıyorum." de.\n' +
+  'Cümleyi asla yarım bırakma, tam olarak bitir ve teknik kelime kullanma.'
 
 // ─── Client singleton ──────────────────────────────────────────────────────
 

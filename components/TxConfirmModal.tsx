@@ -26,6 +26,7 @@ const ERROR_LABELS: Record<TxErrorType, string> = {
   slippage: 'Slippage Hatası',
   insufficient_funds: 'Yetersiz Bakiye',
   program_error: 'Program Hatası',
+  congestion: 'Ağ Yoğunluğu',
   unknown: 'Bilinmeyen Hata',
 }
 
@@ -42,6 +43,11 @@ const FIX_DESCRIPTIONS: Record<TxErrorType, string[]> = {
   ],
   program_error: [
     'Program parametreleri sıfırlandı',
+    'Taze blockhash ile yeniden oluşturuldu',
+    'Solana Devnet üzerinde gönderilecek',
+  ],
+  congestion: [
+    'Öncelik ücreti (Priority Fee) eklendi',
     'Taze blockhash ile yeniden oluşturuldu',
     'Solana Devnet üzerinde gönderilecek',
   ],

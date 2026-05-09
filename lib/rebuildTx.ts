@@ -11,6 +11,7 @@ import {
   Transaction,
   PublicKey,
   SystemProgram,
+  ComputeBudgetProgram,
   LAMPORTS_PER_SOL,
   type ParsedTransactionWithMeta,
   type ParsedInstruction,
@@ -108,22 +109,30 @@ export async function rebuildTx(input: RebuildTxInput): Promise<RebuiltTxData> {
   // 4. Transfer miktarını orijinal TX'ten çıkar (slippage için düzenle)
   let transferLamports = extractTransferAmount(originalTx)
 
-  // Slippage hatası: miktarı %1 toleranslı yeniden hesapla
-  // Gerçek bir Raydium TX'te burada minimum output amount düzeltilir.
-  // Demo için: aynı miktarı kullan, slippage parametresi loglanır.
+  // 5. Hatalara göre transfer miktarını veya parametreleri güncelle
   if (errorType === 'slippage' && transferLamports > 0) {
-    // Tolerans uygulaması: miktarı %1 azalt (slippage pay)
     transferLamports = Math.floor(transferLamports * 0.99)
+  } else if (errorType === 'insufficient_funds' && transferLamports > 0) {
+    // Bakiyeye uydurmak için miktarı %50 düşür
+    transferLamports = Math.floor(transferLamports * 0.5)
   }
 
-  // 5. Yeni TX inşa et
+  // 6. Yeni TX inşa et
   const newTx = new Transaction({
     recentBlockhash: blockhash,
     feePayer: payer,
   })
 
+  // Eğer ağ yoğunluğu hatasıysa, priority fee (öncelik ücreti) ekle
+  if (errorType === 'congestion') {
+    newTx.add(
+      ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 100_000, // 0.1 priority fee
+      })
+    )
+  }
+
   // Demo instruction: self-transfer
-  // Gerçek senaryo: orijinal TX'in swap instruction'larını kopyala
   newTx.add(
     SystemProgram.transfer({
       fromPubkey: payer,
