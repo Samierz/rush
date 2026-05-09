@@ -1,0 +1,95 @@
+// lib/claude.ts — Anthropic SDK wrapper
+// AGENTS.md kuralları:
+//   - Model: claude-sonnet-4-20250514 (sabit)
+//   - max_tokens: 300
+//   - Streaming yok (MVP)
+//   - API key sadece server-side, config.ts'den alınır
+//   - any tipi yasak
+//   - console.log yasak — sadece catch'te console.error
+
+import Anthropic from '@anthropic-ai/sdk'
+import { ANTHROPIC_API_KEY, CLAUDE_MODEL } from './config'
+
+// ─── Sistem Prompt ─────────────────────────────────────────────────────────
+// AGENTS.md standart şablonu + route spec'teki İngilizce varyant tam olarak
+// uygulanır. Prompt'un son satırı aksiyon yönlendirmesini zorunlu kılar.
+
+const SYSTEM_PROMPT =
+  'You are RUSH, a Web3 support agent. Analyze the user\'s failed Solana ' +
+  'transaction and give a short, clear explanation in Turkish. Maximum 2 ' +
+  'sentences. No technical terms. Then say what will happen next.'
+
+// ─── Client singleton ──────────────────────────────────────────────────────
+// Her çağrıda yeni Anthropic() oluşturmak yerine modül yüklendiğinde bir kez
+// oluşturulur. API key boşsa başlatma zamanında hata fırlatılır, böylece
+// sunucu başlamadan önce yanlış konfigürasyon yakalanır.
+
+function buildClient(): Anthropic {
+  if (!ANTHROPIC_API_KEY) {
+    throw new Error(
+      'ANTHROPIC_API_KEY ortam değişkeni tanımlı değil. ' +
+      '.env.local dosyasını kontrol edin.'
+    )
+  }
+  return new Anthropic({ apiKey: ANTHROPIC_API_KEY })
+}
+
+let _client: Anthropic | null = null
+
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = buildClient()
+  }
+  return _client
+}
+
+// ─── Tip Guard ─────────────────────────────────────────────────────────────
+
+function isTextBlock(
+  block: Anthropic.Messages.ContentBlock
+): block is Anthropic.Messages.TextBlock {
+  return block.type === 'text'
+}
+
+// ─── Ana fonksiyon ─────────────────────────────────────────────────────────
+
+/**
+ * Claude Sonnet'e başarısız TX bilgisini gönderir ve Türkçe açıklama alır.
+ *
+ * @param errorType - TxErrorType string'i ('slippage', 'insufficient_funds', …)
+ * @param logs      - Solana TX logMessages dizisi
+ * @returns         - Claude'un ürettiği Türkçe açıklama metni
+ * @throws          - Anthropic API hatası veya beklenmeyen yanıt tipi
+ */
+export async function analyzeFailedTx(
+  errorType: string,
+  logs: string[]
+): Promise<string> {
+  const client = getClient()
+
+  // Kullanıcı mesajı — route spec'i tam olarak uygular
+  const userMessage =
+    `Error type: ${errorType}. Logs: ${logs.join('\n')}`
+
+  const response = await client.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 300,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  })
+
+  // İlk content bloğunu al
+  const firstBlock = response.content[0]
+
+  if (!firstBlock) {
+    throw new Error('Claude boş yanıt döndürdü')
+  }
+
+  if (!isTextBlock(firstBlock)) {
+    throw new Error(
+      `Claude beklenmeyen içerik tipi döndürdü: ${firstBlock.type}`
+    )
+  }
+
+  return firstBlock.text.trim()
+}
