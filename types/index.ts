@@ -5,7 +5,6 @@ export type TxErrorType =
   | 'slippage'
   | 'insufficient_funds'
   | 'program_error'
-  | 'congestion'
   | 'unknown'
 
 /** Parse edilmiş TX sonucu */
@@ -30,6 +29,7 @@ export interface AnalyzeResponse {
 export interface AnalyzeRequestBody {
   errorType: string
   logs: string[]
+  language?: 'tr' | 'en'
 }
 
 /** ElevenLabs TTS yanıtı — hook tarafından kullanılır */

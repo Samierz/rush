@@ -55,12 +55,13 @@ export async function POST(
     )
   }
 
-  const { errorType, logs } = body
+  const { errorType, logs, language } = body
+  const lang: 'tr' | 'en' = language === 'en' ? 'en' : 'tr'
 
   // 3. Claude Sonnet'e gönder
   let explanation: string
   try {
-    explanation = await analyzeFailedTx(errorType, logs)
+    explanation = await analyzeFailedTx(errorType, logs, lang)
   } catch (err) {
     console.error('[analyze] Claude API hatası:', err)
     return NextResponse.json(

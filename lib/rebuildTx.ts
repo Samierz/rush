@@ -36,10 +36,7 @@ function buildDescription(errorType: TxErrorType, slippageBps: number): string {
       return 'İşlem miktarı düşürüldü ve taze blockhash ile yeniden oluşturuldu.'
     case 'program_error':
       return 'Program parametreleri sıfırlandı ve taze blockhash ile yeniden oluşturuldu.'
-    case 'dust_error':
-      return 'Miktar, Solana ağ gereksinimlerini karşılayacak şekilde artırıldı.'
-    case 'mev_attack':
-      return 'İşlem, Jito MEV-korumalı (Private) RPC üzerinden şifreli olarak yeniden hazırlandı.'
+
     default:
       return 'Taze blockhash ile işlem yeniden oluşturuldu.'
   }
@@ -130,14 +127,6 @@ export async function rebuildTx(input: RebuildTxInput): Promise<RebuiltTxData> {
     feePayer: payer,
   })
 
-  // Eğer ağ yoğunluğu hatasıysa, priority fee (öncelik ücreti) ekle
-  if (errorType === 'congestion') {
-    newTx.add(
-      ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 100_000, // 0.1 priority fee
-      })
-    )
-  }
 
   // Demo instruction: self-transfer
   newTx.add(

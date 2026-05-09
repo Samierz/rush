@@ -50,7 +50,7 @@ function buildDemoMockResult(txHash: string): ParsedTxResult {
   if (txHash.startsWith('4VZdo')) {
     return {
       txHash,
-      errorType: 'congestion',
+      errorType: 'unknown',
       logs: [
         'Program log: Instruction: Swap',
         'Program log: Blockhash not found',
@@ -65,7 +65,7 @@ function buildDemoMockResult(txHash: string): ParsedTxResult {
   if (txHash.startsWith('5DUST')) {
     return {
       txHash,
-      errorType: 'dust_error',
+      errorType: 'unknown',
       logs: [
         'Program log: Instruction: Transfer',
         'Program log: Amount is below minimum rent exemption threshold',
@@ -96,7 +96,7 @@ function buildDemoMockResult(txHash: string): ParsedTxResult {
   if (txHash.startsWith('7MEV')) {
     return {
       txHash,
-      errorType: 'mev_attack',
+      errorType: 'unknown',
       logs: [
         'Program log: Instruction: Swap',
         'Program log: SlippageToleranceExceeded',

@@ -56,7 +56,7 @@ export function useSupportAgent() {
 
   // ── Pipeline: parse-tx → analyze ────────────────────────────────────────
 
-  const runPipeline = useCallback(async (txHash: string): Promise<void> => {
+  const runPipeline = useCallback(async (txHash: string, language: 'tr' | 'en' = 'tr'): Promise<void> => {
     // Adım 1: TX parse
     setState((prev) => ({ ...prev, status: 'loading', txHash, errorMessage: null }))
 
@@ -99,6 +99,7 @@ export function useSupportAgent() {
         body: JSON.stringify({
           errorType: parseTxData.errorType,
           logs: parseTxData.logs,
+          language,
         }),
       })
       analyzeJson = await analyzeRes.json()
@@ -133,8 +134,7 @@ export function useSupportAgent() {
 
   // ── Widget açılınca çağrılır ─────────────────────────────────────────────
 
-  const openWidget = useCallback((): void => {
-    // localStorage'dan son başarısız TX hash'i oku
+  const openWidget = useCallback((language: 'tr' | 'en' = 'tr'): void => {
     let txHash: string | null = null
     try {
       txHash = localStorage.getItem(LS_KEY)
@@ -147,7 +147,7 @@ export function useSupportAgent() {
       return
     }
 
-    void runPipeline(txHash)
+    void runPipeline(txHash, language)
   }, [runPipeline])
 
   // ── Düzeltilmiş TX hazırla ───────────────────────────────────────────────

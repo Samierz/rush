@@ -8,11 +8,18 @@ import TxConfirmModal from './TxConfirmModal'
 
 // ─── Hata tipi etiketleri ─────────────────────────────────────────────────
 
-const ERROR_LABELS: Record<string, string> = {
+const ERROR_LABELS_TR: Record<string, string> = {
   slippage: 'Slippage Hatası',
   insufficient_funds: 'Yetersiz Bakiye',
   program_error: 'Program Hatası',
   unknown: 'Bilinmeyen Hata',
+}
+
+const ERROR_LABELS_EN: Record<string, string> = {
+  slippage: 'Slippage Error',
+  insufficient_funds: 'Insufficient Funds',
+  program_error: 'Program Error',
+  unknown: 'Unknown Error',
 }
 
 // ─── Alt-bileşen: Spinner ─────────────────────────────────────────────────
@@ -95,6 +102,7 @@ function PlayButton({
 export function SupportWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [language, setLanguage] = useState<'tr' | 'en'>('tr')
 
   const { state, openWidget, prepareFixedTx, reset, explanation } =
     useSupportAgent()
@@ -105,9 +113,9 @@ export function SupportWidget() {
   // ── Global event dinleyici (Demo için) ──────────────────────────────────
   useEffect(() => {
     const handleNewTx = () => {
-      reset() // Önceki durumu temizle
-      setIsOpen(true) // Paneli otomatik aç
-      setTimeout(() => openWidget(), 50) // State güncellenmesi için ufak bir gecikme
+      reset()
+      setIsOpen(true)
+      setTimeout(() => openWidget(language), 50)
     }
 
     window.addEventListener('rush:demo_failed_tx', handleNewTx)
@@ -118,9 +126,8 @@ export function SupportWidget() {
 
   function handleOpen() {
     setIsOpen(true)
-    // Widget ilk açıldığında pipeline'ı başlat
     if (state.status === 'idle') {
-      openWidget()
+      openWidget(language)
     }
   }
 
@@ -146,13 +153,13 @@ export function SupportWidget() {
 
   // ── Float buton rengi ─────────────────────────────────────────────────
 
-  const hasFailedTx = state.txHash !== null
+  const isErrorActive = state.txHash !== null && state.status !== 'success'
   const btnBase =
     'fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-2xl ' +
     'flex items-center justify-center transition-all duration-300 ease-in-out ' +
     'focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-slate-900'
 
-  const btnColor = hasFailedTx
+  const btnColor = isErrorActive
     ? 'bg-red-500 hover:bg-red-400 animate-pulse'
     : 'bg-purple-600 hover:bg-purple-500'
 
@@ -167,7 +174,7 @@ export function SupportWidget() {
         className={`${btnBase} ${btnColor}`}
       >
         {/* Kulaklık SVG */}
-        {hasFailedTx ? (
+        {isErrorActive ? (
           <svg
             className="w-6 h-6 text-white"
             fill="none"
@@ -231,26 +238,43 @@ export function SupportWidget() {
                 />
               </span>
               <span className="text-white font-semibold text-sm">
-                RUSH Destek
+                RUSH {language === 'en' ? 'Support' : 'Destek'}
               </span>
               {state.errorType && (
                 <span className="text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full">
-                  {ERROR_LABELS[state.errorType] ?? state.errorType}
+                  {(language === 'en' ? ERROR_LABELS_EN : ERROR_LABELS_TR)[state.errorType] ?? state.errorType}
                 </span>
               )}
             </div>
-            <button
-              id="close-widget-btn"
-              onClick={handleClose}
-              aria-label="Paneli kapat"
-              className="w-7 h-7 flex items-center justify-center rounded-lg
-                         text-slate-500 hover:text-white hover:bg-white/10
-                         transition-all duration-150"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1.5">
+              {/* TR / EN Toggle */}
+              <button
+                onClick={() => {
+                  const newLang = language === 'tr' ? 'en' : 'tr'
+                  setLanguage(newLang)
+                  if (state.txHash) {
+                    reset()
+                    setTimeout(() => openWidget(newLang), 50)
+                  }
+                }}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:border-purple-500/40 hover:bg-purple-500/10 transition-all"
+                title={language === 'tr' ? 'Switch to English' : "Türkçe'ye geç"}
+              >
+                {language === 'tr' ? 'EN' : 'TR'}
+              </button>
+              <button
+                id="close-widget-btn"
+                onClick={handleClose}
+                aria-label="Paneli kapat"
+                className="w-7 h-7 flex items-center justify-center rounded-lg
+                           text-slate-500 hover:text-white hover:bg-white/10
+                           transition-all duration-150"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Panel içerik */}
@@ -356,7 +380,7 @@ export function SupportWidget() {
                 </p>
                 <button
                   id="retry-widget-btn"
-                  onClick={openWidget}
+                  onClick={() => openWidget(language)}
                   className="text-purple-400 hover:text-purple-300 text-xs
                              underline underline-offset-2 transition-colors"
                 >

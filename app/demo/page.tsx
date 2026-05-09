@@ -53,7 +53,7 @@ export default function DemoPage() {
     await new Promise<void>((resolve) => setTimeout(resolve, 900))
 
     const amountNum = parseFloat(payAmount) || 0
-    let hash = DEMO_SLIPPAGE_TX_HASH
+    let hash: string | null = DEMO_SLIPPAGE_TX_HASH
 
     if (receiveToken === 'PEPE' && slippage >= 5) {
       // MEV Bot Attack: PEPE + Yüksek Slippage
@@ -222,17 +222,8 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              {/* Swap Ok */}
-              <div className="flex justify-center -my-1 relative z-10">
-                <button className="bg-[#1a1d35] border-2 border-[#0d0f1a] rounded-xl p-2.5 text-slate-400 hover:text-purple-400 hover:border-purple-500/30 transition-all duration-200 group">
-                  <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                  </svg>
-                </button>
-              </div>
-
               {/* RECEIVE INPUT */}
-              <div className="bg-[#0d0f1a] rounded-xl p-4 border border-white/5">
+              <div className="bg-[#0d0f1a] rounded-xl p-4 border border-white/5 mt-1">
                 <div className="flex justify-between text-xs text-slate-500 mb-3">
                   <span>Alacaksın (Tahmini)</span>
                   {receiveToken === 'BONK' && (

@@ -9,9 +9,9 @@
 import { GoogleGenAI } from '@google/genai'
 import { GEMINI_API_KEY, GEMINI_MODEL } from './config'
 
-// ─── Sistem Prompt ─────────────────────────────────────────────────────────
+// ─── Sistem Promptları ────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT =
+const SYSTEM_PROMPT_TR =
   'Kullanıcının Solana işlemi başarısız oldu. Buna teknik olmayan, TÜRKÇE ve 2 cümlelik tam bir açıklama yap. ' +
   'Gelen hataya göre şu mantığı kullan:\n' +
   '- Eğer hata Slippage ise: "İşleminiz fiyat değişimi nedeniyle iptal edildi. Şimdi fiyat toleransını artırarak işlemi sizin için yeniden hazırlıyorum." de.\n' +
@@ -21,6 +21,17 @@ const SYSTEM_PROMPT =
   '- Eğer hata Program Error (havuz/sözleşme hatası) ise: "Seçtiğiniz token için likidite havuzu şu an kilitli veya hizmet dışı. Lütfen başka bir token seçin ya da kısa süre sonra tekrar deneyin." de.\n' +
   '- Eğer hata MEV Attack ise: "İşleminiz bir MEV botu tarafından fiyat manipülasyonuna uğradı. Paranızı korumak için işlemi iptal ettim, şimdi MEV-korumalı özel bir kanal üzerinden işlemi güvenle yeniden hazırlıyorum." de.\n' +
   'Cümleyi asla yarım bırakma, tam olarak bitir ve teknik kelime kullanma.'
+
+const SYSTEM_PROMPT_EN =
+  'The user had a failed Solana transaction. Give a short, non-technical, ENGLISH explanation in exactly 2 sentences. ' +
+  'Based on the error type, use this logic:\n' +
+  '- If error is Slippage: "Your transaction was cancelled due to rapid price movement. I am now preparing a new transaction with a higher price tolerance for you."\n' +
+  '- If error is Insufficient Funds: "Your transaction failed because your wallet balance is too low. I am rebuilding the transaction with an adjusted amount to fit your balance."\n' +
+  '- If error is Congestion/Blockhash: "The Solana network is very busy right now, and your transaction timed out. I am adding a small priority fee and resubmitting the transaction."\n' +
+  '- If error is Dust Error (amount too small): "The amount you want to send is too small to even cover network fees. I am adjusting the amount to meet the minimum threshold and resubmitting."\n' +
+  '- If error is Program Error (pool/contract error): "The liquidity pool for the token you selected is currently locked or unavailable. Please choose a different token or try again shortly."\n' +
+  '- If error is MEV Attack: "Your transaction was targeted by a sandwich attack bot that manipulated the price. I have cancelled the transaction to protect your funds and am resubmitting through a private MEV-protected channel."\n' +
+  'Never leave a sentence incomplete. Always finish and avoid technical jargon.'
 
 // ─── Client singleton ──────────────────────────────────────────────────────
 
@@ -55,11 +66,16 @@ function getClient(): GoogleGenAI {
  */
 export async function analyzeFailedTx(
   errorType: string,
-  logs: string[]
+  logs: string[],
+  language: 'tr' | 'en' = 'tr'
 ): Promise<string> {
   const client = getClient()
+  const systemPrompt = language === 'en' ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_TR
+  const langLabel = language === 'en'
+    ? 'PLEASE GENERATE ONLY ENGLISH EXPLANATION:'
+    : 'LÜTFEN YUKARIDAKİ KURALLARA GÖRE SADECE TÜRKÇE AÇIKLAMA ÜRET:'
 
-  const userMessage = `${SYSTEM_PROMPT}\n\nİŞLEM BİLGİLERİ:\nHata Tipi: ${errorType}\nLoglar:\n${logs.join('\n')}\n\nLÜTFEN YUKARIDAKİ KURALLARA GÖRE SADECE TÜRKÇE AÇIKLAMA ÜRET:`
+  const userMessage = `${systemPrompt}\n\nTRANSACTION INFO:\nError Type: ${errorType}\nLogs:\n${logs.join('\n')}\n\n${langLabel}`
 
   const response = await client.models.generateContent({
     model: GEMINI_MODEL,
