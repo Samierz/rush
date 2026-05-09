@@ -24,14 +24,23 @@ const DEMO_FUNDS_TX_HASH =
   '3L3RY5sT8K4kyEnqhizwaqxLEbcYvpGrGPNEYRwtbCSUtL6YL86jdrvCbohnP5q8VxQ3qzGmt3W3iQJW97rD7m3'
 const DEMO_CONGESTION_TX_HASH =
   '4VZdodJgBy6dxMgm45zusmRzrPvKtiumu5YrK9RLPJADpzeJzgebxHsoQD4B58FCFS6aGUufKZka56xFiBGpB94'
+const DEMO_DUST_TX_HASH =
+  '5DUSTm3X9vPqRzLwaNknhizwaqxLEbcZxpGrGPMEYcwtbCSUtL6YA86jdrvCbohnP5q8VxQ3qzGmt3W3iXJW97'
+const DEMO_PROGRAM_TX_HASH =
+  '6PROGdJgBy7dxMgm45zusmRzrPvKtiumu5YrK9RLPJADpzeJzgebxHsoQD4B58FCFS6aGUufKZka56xFiBGpC11'
+const DEMO_MEV_TX_HASH =
+  '7MEVdJgBy8dxMgm45zusmRzrPvKtiumu5YrK9RLPJADpzeJzgebxHsoQD4B58FCFS6aGUufKZka56xFiBGP999'
 
-type TxStatus = 'idle' | 'sending' | 'failed'
+type TxStatus = 'idle' | 'sending' | 'failed' | 'success'
 
 export default function DemoPage() {
   const [txStatus, setTxStatus] = useState<TxStatus>('idle')
   const [payAmount, setPayAmount] = useState<string>('1')
   const [slippage, setSlippage] = useState<number>(0.5)
   const [priorityFee, setPriorityFee] = useState<boolean>(true)
+  const [activeTab, setActiveTab] = useState<string>('Takas')
+  const [receiveToken, setReceiveToken] = useState<'USDC' | 'BONK' | 'PEPE'>('USDC')
+  const [showTokenMenu, setShowTokenMenu] = useState<boolean>(false)
   const USER_BALANCE = 2.45 // Demo bakiye
 
   // ─── Gizli Hata Simülasyonu ────────────────────────────────────────────────
@@ -46,22 +55,39 @@ export default function DemoPage() {
     const amountNum = parseFloat(payAmount) || 0
     let hash = DEMO_SLIPPAGE_TX_HASH
 
-    if (amountNum >= USER_BALANCE) {
+    if (receiveToken === 'PEPE' && slippage >= 5) {
+      // MEV Bot Attack: PEPE + Yüksek Slippage
+      hash = DEMO_MEV_TX_HASH
+    } else if (receiveToken === 'BONK' || receiveToken === 'PEPE') {
+      // Program Error: Havuz hatası (PEPE tek başına seçilirse de hata versin)
+      hash = DEMO_PROGRAM_TX_HASH
+    } else if (amountNum > 0 && amountNum < 0.01) {
+      // Dust Error: çok küçük miktar
+      hash = DEMO_DUST_TX_HASH
+    } else if (amountNum >= USER_BALANCE) {
       hash = DEMO_FUNDS_TX_HASH
     } else if (slippage === 0.1) {
       hash = DEMO_SLIPPAGE_TX_HASH
     } else if (!priorityFee) {
       hash = DEMO_CONGESTION_TX_HASH
+    } else {
+      // Hiçbir hata kuralına uymuyorsa BAŞARILI say
+      hash = null
     }
 
-    setTxStatus('failed')
-    try {
-      localStorage.setItem(LS_KEY, hash)
-      window.dispatchEvent(new Event('rush:demo_failed_tx'))
-    } catch {
-      // Private browsing
+    if (hash) {
+      setTxStatus('failed')
+      try {
+        localStorage.setItem(LS_KEY, hash)
+        window.dispatchEvent(new Event('rush:demo_failed_tx'))
+      } catch {
+        // Private browsing
+      }
+    } else {
+      setTxStatus('success')
     }
-    setTimeout(() => setTxStatus('idle'), 3000)
+
+    setTimeout(() => setTxStatus('idle'), 4000)
   }
 
   const receiveAmount = payAmount ? (parseFloat(payAmount) * 145.32).toFixed(2) : '0.00'
@@ -113,13 +139,14 @@ export default function DemoPage() {
 
           {/* Sekme Çubuğu */}
           <div className="flex gap-1 bg-white/5 rounded-xl p-1 border border-white/5">
-            {['Takas', 'Limit Emir', 'DCA'].map((tab, i) => (
+            {['Takas', 'Limit Emir', 'DCA'].map((tab) => (
               <button
                 key={tab}
+                onClick={() => setActiveTab(tab)}
                 className={`flex-1 text-sm py-2 rounded-lg font-medium transition-all ${
-                  i === 0
+                  activeTab === tab
                     ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-300'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
                 }`}
               >
                 {tab}
@@ -128,6 +155,7 @@ export default function DemoPage() {
           </div>
 
           {/* ── SWAP Kartı ── */}
+          {activeTab === 'Takas' ? (
           <div className="bg-[#13162a]/80 backdrop-blur-xl border border-white/8 rounded-2xl shadow-2xl overflow-hidden">
 
             {/* Kart Başlığı */}
@@ -207,26 +235,76 @@ export default function DemoPage() {
               <div className="bg-[#0d0f1a] rounded-xl p-4 border border-white/5">
                 <div className="flex justify-between text-xs text-slate-500 mb-3">
                   <span>Alacaksın (Tahmini)</span>
+                  {receiveToken === 'BONK' && (
+                    <span className="text-orange-400 font-medium flex items-center gap-1">
+                      ⚠ Havuz riski yüksek
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <input
                     type="text"
                     readOnly
-                    value={receiveAmount}
+                    value={receiveToken === 'USDC' ? receiveAmount : (parseFloat(payAmount || '0') * (receiveToken === 'BONK' ? 42150000 : 185000000)).toLocaleString()}
                     className="flex-1 bg-transparent text-3xl font-semibold text-slate-300 focus:outline-none min-w-0"
                   />
-                  <div className="flex items-center gap-2 bg-slate-800/80 rounded-xl py-2 px-3 shrink-0 border border-white/5 cursor-pointer hover:bg-slate-700/80 transition-colors">
-                    <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-                      <span className="text-white text-[9px] font-bold">$</span>
-                    </div>
-                    <span className="text-white font-semibold text-sm">USDC</span>
-                    <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                  {/* Token Seçici Dropdown */}
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => setShowTokenMenu(!showTokenMenu)}
+                      className={`flex items-center gap-2 rounded-xl py-2 px-3 border transition-colors ${
+                        receiveToken === 'BONK'
+                          ? 'bg-orange-500/15 border-orange-500/30 hover:bg-orange-500/25'
+                          : 'bg-slate-800/80 border-white/5 hover:bg-slate-700/80'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                        receiveToken === 'USDC' ? 'bg-blue-500 text-white' : 'bg-orange-500 text-white'
+                      }`}>
+                        {receiveToken === 'USDC' ? '$' : '🐶'}
+                      </div>
+                      <span className="text-white font-semibold text-sm">{receiveToken}</span>
+                      <svg className={`w-3 h-3 text-slate-400 transition-transform ${showTokenMenu ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </button>
+                    {/* Dropdown Menü */}
+                    {showTokenMenu && (
+                      <div className="absolute right-0 top-11 bg-slate-800 border border-white/10 rounded-xl shadow-2xl z-30 overflow-hidden w-44">
+                        {[
+                          { symbol: 'USDC', label: 'USD Coin', color: 'bg-blue-500', emoji: '$', risk: false },
+                          { symbol: 'BONK', label: 'Bonk', color: 'bg-orange-500', emoji: '🐶', risk: true },
+                          { symbol: 'PEPE', label: 'Pepe', color: 'bg-green-600', emoji: '🐸', risk: true },
+                        ].map((token) => (
+                          <button
+                            key={token.symbol}
+                            onClick={() => {
+                              setReceiveToken(token.symbol as 'USDC' | 'BONK' | 'PEPE')
+                              setShowTokenMenu(false)
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-white/5 transition-colors ${receiveToken === token.symbol ? 'bg-white/5' : ''}`}
+                          >
+                            <div className={`w-7 h-7 rounded-full ${token.color} flex items-center justify-center text-[10px] text-white shrink-0`}>
+                              {token.emoji}
+                            </div>
+                            <div>
+                              <p className="text-white text-sm font-medium">{token.symbol}</p>
+                              <p className="text-slate-500 text-xs">{token.label}</p>
+                            </div>
+                            {token.risk && <span className="ml-auto text-orange-400 text-xs">⚠</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-slate-600">
-                  ≈ ${receiveAmount} USD
+                  {receiveToken === 'USDC' 
+                    ? `≈ $${receiveAmount} USD` 
+                    : `≈ ${(parseFloat(payAmount || '0') * (receiveToken === 'BONK' ? 42150000 : 185000000)).toLocaleString()} ${receiveToken}`}
                 </div>
               </div>
+
 
               {/* ── AYARLAR (Gizli Demo Tetikleyicileri) ── */}
               <div className="bg-[#0d0f1a]/60 rounded-xl px-4 py-3 border border-white/5 space-y-3">
@@ -245,13 +323,13 @@ export default function DemoPage() {
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    {[0.1, 0.5, 1.0].map((val) => (
+                    {[0.1, 0.5, 1.0, 5.0].map((val) => (
                       <button
                         key={val}
                         onClick={() => setSlippage(val)}
                         className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all duration-150 ${
                           slippage === val
-                            ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/20'
+                            ? val >= 5 ? 'bg-red-500/25 text-red-300 border border-red-500/40' : 'bg-purple-500/25 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/20'
                             : 'bg-slate-800 text-slate-400 border border-transparent hover:bg-slate-700 hover:text-slate-300'
                         }`}
                       >
@@ -303,10 +381,12 @@ export default function DemoPage() {
               <button
                 id="swap-btn"
                 onClick={handleSwap}
-                disabled={txStatus === 'sending' || !payAmount || parseFloat(payAmount) <= 0}
+                disabled={txStatus === 'sending' || txStatus === 'success' || !payAmount || parseFloat(payAmount) <= 0}
                 className={`w-full font-bold py-4 rounded-xl text-base transition-all duration-200 flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                   txStatus === 'failed'
                     ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    : txStatus === 'success'
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                     : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.98]'
                 }`}
               >
@@ -321,6 +401,13 @@ export default function DemoPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                     </svg>
                     <span>İşlem Başarısız — RUSH&apos;a Danış</span>
+                  </>
+                ) : txStatus === 'success' ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Takas Başarılı!</span>
                   </>
                 ) : (
                   'Takas Et'
@@ -338,6 +425,19 @@ export default function DemoPage() {
               )}
             </div>
           </div>
+          ) : (
+            <div className="bg-[#13162a]/80 backdrop-blur-xl border border-white/8 rounded-2xl shadow-2xl p-12 flex flex-col items-center justify-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-2">
+                <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white">{activeTab} Özelliği</h3>
+              <p className="text-sm text-slate-400">
+                Bu özellik şu anda geliştirme aşamasında. Çok yakında SolSwap üzerinde aktif olacak!
+              </p>
+            </div>
+          )}
 
           {/* Alt Bilgi */}
           <p className="text-center text-slate-600 text-xs">

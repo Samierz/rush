@@ -62,6 +62,54 @@ function buildDemoMockResult(txHash: string): ParsedTxResult {
     }
   }
 
+  if (txHash.startsWith('5DUST')) {
+    return {
+      txHash,
+      errorType: 'dust_error',
+      logs: [
+        'Program log: Instruction: Transfer',
+        'Program log: Amount is below minimum rent exemption threshold',
+        'Program failed to complete: Transaction results in an account with insufficient balance for rent',
+      ],
+      rawError: { InstructionError: [0, { InvalidAccountData: {} }] },
+      slot: null,
+      blockTime: null,
+    }
+  }
+
+  if (txHash.startsWith('6PROG')) {
+    return {
+      txHash,
+      errorType: 'program_error',
+      logs: [
+        'Program log: Instruction: SwapBaseIn',
+        'Program log: Error: custom program error: 0x3e',
+        'Program log: Pool is locked or uninitialized',
+        'Program failed to complete: CustomProgramError',
+      ],
+      rawError: { InstructionError: [1, { Custom: 62 }] },
+      slot: null,
+      blockTime: null,
+    }
+  }
+
+  if (txHash.startsWith('7MEV')) {
+    return {
+      txHash,
+      errorType: 'mev_attack',
+      logs: [
+        'Program log: Instruction: Swap',
+        'Program log: SlippageToleranceExceeded',
+        'Program log: Warning: Potential frontrun/sandwich attack detected by Jito MEV monitor',
+        'Program log: Error: custom program error: 0x1771',
+        'Program failed to complete: MEV protection triggered',
+      ],
+      rawError: { InstructionError: [0, { Custom: 6001 }] },
+      slot: null,
+      blockTime: null,
+    }
+  }
+
   // Varsayılan / Slippage mock
   return {
     txHash,
@@ -106,7 +154,14 @@ export async function POST(
 
   const { txHash } = body
 
-  // 3. Devnet'ten TX'i çek — 3 deneme, 3 saniye aralıkla
+  // 3. Demo hash mi? RPC'ye gitmeden hemen mock dön
+  const DEMO_PREFIXES = ['2AXDG', '3L3RY', '4VZdo', '5DUST', '6PROG', '7MEV']
+  if (DEMO_PREFIXES.some(prefix => txHash.startsWith(prefix))) {
+    const mockResult = buildDemoMockResult(txHash)
+    return NextResponse.json({ data: mockResult }, { status: 200 })
+  }
+
+  // 4. Devnet'ten TX'i çek — 3 deneme, 3 saniye aralıkla
   let tx: Awaited<ReturnType<typeof fetchTransactionWithRetry>>
   try {
     tx = await fetchTransactionWithRetry(txHash)
@@ -118,8 +173,7 @@ export async function POST(
     )
   }
 
-  // 4a. TX devnet'te bulunamadı → Demo mock response
-  //     Gerçek bir hackathon demosu için yeterli; prod'da kaldırılır.
+  // 5a. TX devnet'te bulunamadı → Demo mock response (fallback)
   if (tx === null) {
     const mockResult = buildDemoMockResult(txHash)
     return NextResponse.json({ data: mockResult }, { status: 200 })

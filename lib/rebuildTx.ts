@@ -36,6 +36,10 @@ function buildDescription(errorType: TxErrorType, slippageBps: number): string {
       return 'İşlem miktarı düşürüldü ve taze blockhash ile yeniden oluşturuldu.'
     case 'program_error':
       return 'Program parametreleri sıfırlandı ve taze blockhash ile yeniden oluşturuldu.'
+    case 'dust_error':
+      return 'Miktar, Solana ağ gereksinimlerini karşılayacak şekilde artırıldı.'
+    case 'mev_attack':
+      return 'İşlem, Jito MEV-korumalı (Private) RPC üzerinden şifreli olarak yeniden hazırlandı.'
     default:
       return 'Taze blockhash ile işlem yeniden oluşturuldu.'
   }
@@ -98,9 +102,12 @@ export async function rebuildTx(input: RebuildTxInput): Promise<RebuiltTxData> {
 
   const connection = getConnection()
 
-  // 2. Orijinal TX'i çek (retry ile)
-  const originalTx = await fetchTransactionWithRetry(txHash)
+  // 2. Orijinal TX'i çek (retry ile) — demo hash ise RPC'ye gitme
+  const DEMO_PREFIXES = ['2AXDG', '3L3RY', '4VZdo', '5DUST', '6PROG', '7MEV']
+  const isDemoHash = DEMO_PREFIXES.some(prefix => txHash.startsWith(prefix))
+  const originalTx = isDemoHash ? null : await fetchTransactionWithRetry(txHash)
   // Demo Modu: TX bulunamazsa hata fırlatma, demo transfer miktarları ile devam et.
+
 
   // 3. ZORUNLU: Her zaman taze blockhash al — asla orijinal TX'inkini reuse etme
   const { blockhash, lastValidBlockHeight } =

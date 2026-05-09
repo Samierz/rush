@@ -17,6 +17,9 @@ const SYSTEM_PROMPT =
   '- Eğer hata Slippage ise: "İşleminiz fiyat değişimi nedeniyle iptal edildi. Şimdi fiyat toleransını artırarak işlemi sizin için yeniden hazırlıyorum." de.\n' +
   '- Eğer hata Insufficient Funds (Yetersiz Bakiye) ise: "Cüzdanınızdaki bakiye yetersiz olduğu için işlem gerçekleşmedi. İşlem miktarını bakiyenize uygun olarak düşürüp işlemi yeniden hazırlıyorum." de.\n' +
   '- Eğer hata Congestion/Blockhash ise: "Solana ağı şu an çok yoğun olduğu için işleminiz zaman aşımına uğradı. İşleminize ufak bir öncelik ücreti ekleyerek yeniden hazırlıyorum." de.\n' +
+  '- Eğer hata Dust Error (miktar çok küçük) ise: "Göndermek istediğiniz miktar Solana ağ ücretlerini bile karşılayamayacak kadar küçük. Minimum işlem tutarını sağlayarak işlemi düzeltiyor ve yeniden gönderiyorum." de.\n' +
+  '- Eğer hata Program Error (havuz/sözleşme hatası) ise: "Seçtiğiniz token için likidite havuzu şu an kilitli veya hizmet dışı. Lütfen başka bir token seçin ya da kısa süre sonra tekrar deneyin." de.\n' +
+  '- Eğer hata MEV Attack ise: "İşleminiz bir MEV botu tarafından fiyat manipülasyonuna uğradı. Paranızı korumak için işlemi iptal ettim, şimdi MEV-korumalı özel bir kanal üzerinden işlemi güvenle yeniden hazırlıyorum." de.\n' +
   'Cümleyi asla yarım bırakma, tam olarak bitir ve teknik kelime kullanma.'
 
 // ─── Client singleton ──────────────────────────────────────────────────────
